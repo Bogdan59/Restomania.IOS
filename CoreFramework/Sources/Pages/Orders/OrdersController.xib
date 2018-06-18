@@ -12,6 +12,8 @@
     <objects>
         <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="OrdersController" customModule="CoreFramework" customModuleProvider="target">
             <connections>
+                <outlet property="orderImage" destination="CIw-T1-qbb" id="BX4-Bi-6MD"/>
+                <outlet property="orderLabel" destination="VYC-Un-uAL" id="mNg-kN-a2H"/>
                 <outlet property="ordersTable" destination="AIR-eQ-Zt9" id="zCi-Pz-oX0"/>
                 <outlet property="view" destination="iN0-l3-epB" id="rwE-7j-QhU"/>
             </connections>

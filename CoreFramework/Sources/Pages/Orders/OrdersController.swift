@@ -14,6 +14,8 @@ public class OrdersController: UIViewController {
 
     // MARK: UI Elements
     @IBOutlet private weak var ordersTable: UITableView!
+    @IBOutlet weak var orderImage: UIImageView!
+    @IBOutlet weak var orderLabel: UILabel!
     private var interfaceLoader: InterfaceLoader!
     private var refreshControl: RefreshControl!
 
