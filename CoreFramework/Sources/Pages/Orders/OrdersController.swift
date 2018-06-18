@@ -51,7 +51,11 @@ public class OrdersController: UIViewController {
     }
     public override func viewDidLoad() {
         super.viewDidLoad()
-
+        
+        self.orderImage.isHidden = true
+        self.orderLabel.isHidden = true
+        self.ordersTable.isHidden = true
+        
         loadData()
 
         ordersService.subscribe(guid: guid, handler: self, tag: _tag)
@@ -152,6 +156,24 @@ extension OrdersController: OrdersCacheServiceDelegate {
 
         if (!apiKeysService.isAuth) {
             return
+        }
+        
+        DispatchQueue.main.async {
+            
+            self.orderImage.image = #imageLiteral(resourceName: "iTunesArtwork")
+            self.orderLabel.text = "Пока тут нет заказов, но надеюсь скоро будет"
+            
+            if self.orders.count != 0 {
+                
+                self.orderLabel.isHidden = true
+                self.orderImage.isHidden = true
+                self.ordersTable.isHidden = false
+            } else {
+                
+                self.orderLabel.isHidden = false
+                self.orderImage.isHidden = false
+                self.ordersTable.isHidden = true
+            }
         }
 
         let orders = ordersService.cache.all
