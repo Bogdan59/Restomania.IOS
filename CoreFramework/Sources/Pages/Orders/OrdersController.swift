@@ -11,19 +11,23 @@ import UIKit
 import MdsKit
 
 public class OrdersController: UIViewController {
-
+    
     // MARK: UI Elements
     @IBOutlet private weak var ordersTable: UITableView!
     @IBOutlet weak var orderImage: UIImageView!
     @IBOutlet weak var orderLabel: UILabel!
+    
+    @IBOutlet var itemsView: UIView!
+    
+    
     private var interfaceLoader: InterfaceLoader!
     private var refreshControl: RefreshControl!
-
+    
     // MARK: Tools
     private let _tag = String.tag(OrdersController.self)
     private let guid = Guid.new
     private var loadQueue: AsyncQueue!
-
+    
     // MARK: Loaders
     private let ordersService = DependencyResolver.get(OrdersCacheService.self)
     private let apiKeysService = DependencyResolver.get(ApiKeyService.self)
@@ -31,13 +35,13 @@ public class OrdersController: UIViewController {
     private var ordersContainer: PartsLoadTypedContainer<[DishOrder]>!
     private var orders = [DishOrder]()
     private var loaderAdapter: PartsLoader!
-
+    
     // MARK: Life circle
     public init() {
         super.init(nibName: String.tag(OrdersController.self), bundle: Bundle.coreFramework)
-
+        
         loadQueue = AsyncQueue.createForControllerLoad(for: tag)
-
+        
         ordersContainer = PartsLoadTypedContainer<[DishOrder]>(updateHandler: displayOrders, completeLoadHandler: completeLoad)
         loaderAdapter = PartsLoader([ordersContainer])
     }
@@ -46,47 +50,48 @@ public class OrdersController: UIViewController {
     }
     public override func loadView() {
         super.loadView()
-
+        
         loadMarkup()
     }
     public override func viewDidLoad() {
         super.viewDidLoad()
         
+        ordersTable.backgroundView = itemsView
+        
         self.orderImage.isHidden = true
         self.orderLabel.isHidden = true
-        self.ordersTable.isHidden = true
         
         loadData()
-
+        
         ordersService.subscribe(guid: guid, handler: self, tag: _tag)
         apiKeysService.subscribe(guid: guid, handler: self, tag: _tag)
     }
     public override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-
+        
         self.navigationController?.setNavigationBarHidden(true, animated: false)
         self.navigationItem.title = Keys.title.localized
-
+        
         displayCachedOrders()
     }
-
+    
     // MARK: Process methods
     private func loadMarkup() {
-
+        
         interfaceLoader = InterfaceLoader(for: self.view)
         refreshControl = ordersTable.addRefreshControl(for: self, action: #selector(needReload))
-
+        
         ordersTable.dataSource = self
         ordersTable.delegate = self
         OrdersControllerOrderCell.register(in: ordersTable)
     }
     private func loadData() {
         displayCachedOrders()
-
+        
         if (orders.isEmpty) {
             interfaceLoader.show()
         }
-
+        
         requestOrders()
     }
     @objc private func needReload() {
@@ -94,23 +99,23 @@ public class OrdersController: UIViewController {
         requestOrders()
     }
     private func requestOrders() {
-
+        
         if (!apiKeysService.isAuth) {
             interfaceLoader.hide()
             refreshControl.endRefreshing()
             return
         }
-
+        
         let request = ordersService.all(chainId: configs.chainId, placeId: configs.placeId)
         request.async(loadQueue, completion: ordersContainer.completeLoad)
     }
     private func completeLoad() {
         DispatchQueue.main.async {
-
+            
             if (self.loaderAdapter.isLoad) {
                 self.interfaceLoader.hide()
                 self.refreshControl.endRefreshing()
-
+                
                 if (self.loaderAdapter.problemWithLoad) {
                     self.showToast(Keys.loadError)
                 }
@@ -118,9 +123,9 @@ public class OrdersController: UIViewController {
         }
     }
     private func displayOrders(_ orders: [DishOrder]) {
-
+        
         self.orders = orders.sorted(by: self.sorter)
-
+        
         DispatchQueue.main.async {
             self.ordersTable.reloadData()
         }
@@ -129,7 +134,7 @@ public class OrdersController: UIViewController {
         return left.id > right.id
     }
     private func goToOrder(id orderId: Long) {
-
+        
         let vc = OneOrderController(for: orderId)
         self.navigationController?.pushViewController(vc, animated: true)
     }
@@ -138,13 +143,13 @@ public class OrdersController: UIViewController {
 extension OrdersController: OrdersCacheServiceDelegate {
     public func update(_ orderId: Long, update: DishOrder) {
         displayCachedOrders()
-
+        
         DispatchQueue.main.async {
             for cell in self.ordersTable.visibleCells {
                 if let cell = cell as? OrdersControllerOrderCell,
                     cell.orderId == orderId {
-                        cell.update(by: update)
-                        break
+                    cell.update(by: update)
+                    break
                 }
             }
         }
@@ -153,59 +158,61 @@ extension OrdersController: OrdersCacheServiceDelegate {
         displayCachedOrders()
     }
     private func displayCachedOrders() {
-
+        
         if (!apiKeysService.isAuth) {
             return
         }
         
-        DispatchQueue.main.async {
-            
-            self.orderImage.image = #imageLiteral(resourceName: "iTunesArtwork")
-            self.orderLabel.text = "Пока тут нет заказов, но надеюсь скоро будет"
-            
-            if self.orders.count != 0 {
-                
-                self.orderLabel.isHidden = true
-                self.orderImage.isHidden = true
-                self.ordersTable.isHidden = false
-            } else {
-                
-                self.orderLabel.isHidden = false
-                self.orderImage.isHidden = false
-                self.ordersTable.isHidden = true
-            }
-        }
-
         let orders = ordersService.cache.all
         self.ordersContainer.update(orders)
+    }
+    
+    private func showItemView(hide: Bool) {
+        orderImage.image = #imageLiteral(resourceName: "logo-dark")
+        orderLabel.text = Keys.itemText.localized
+        
+        orderLabel.isHidden = hide
+        orderImage.isHidden = hide
+        itemsView.isHidden = hide
     }
 }
 // MARK: Table
 extension OrdersController: UITableViewDelegate {
-
+    
     public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-
+        
         tableView.deselectRow(at: indexPath, animated: true)
-
+        
         let cell = tableView.cellForRow(at: indexPath) as! OrdersControllerOrderCell
         let orderId = cell.orderId
-
+        
         goToOrder(id: orderId)
     }
 }
 extension OrdersController: UITableViewDataSource {
-
+    
     public func numberOfSections(in tableView: UITableView) -> Int {
         return 1
     }
     public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return orders.count
+        
+        if orders.count == 0 {
+            showItemView(hide: false)
+            
+            self.ordersTable.backgroundView = itemsView
+            self.ordersTable.separatorStyle = UITableViewCellSeparatorStyle.none
+            return 0
+            
+        } else {
+            showItemView(hide: true)
+            return orders.count
+        }
     }
     public func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-
+        
         let cell = tableView.dequeueReusableCell(withIdentifier: OrdersControllerOrderCell.identifier, for: indexPath) as! OrdersControllerOrderCell
         cell.update(by: orders[indexPath.row])
-
+        
         return cell
     }
 }
@@ -213,7 +220,7 @@ extension OrdersController: UITableViewDataSource {
 //Api keys
 extension OrdersController: ApiKeyServiceDelegate {
     public func apiKeyService(_ service: ApiKeyService, logout role: ApiRole) {
-
+        
         DispatchQueue.main.async {
             self.orders.removeAll()
             self.ordersTable.reloadData()
@@ -224,19 +231,24 @@ extension OrdersController: ApiKeyServiceDelegate {
 //Localization
 extension OrdersController {
     public enum Keys: String, Localizable {
-
+        
         public var tableName: String {
             return String.tag(OrdersController.self)
         }
         public var bundle: Bundle {
             return Bundle.coreFramework
         }
-
+        
         case title = "Title"
-
+        
         case idFormat = "Formats.Id"
         case dateAndTimeFormat = "Formats.DateAndTime"
-
+        
         case loadError = "Errors.Load"
+        
+        case itemText = "Item.text"
+        
+        
+        
     }
 }

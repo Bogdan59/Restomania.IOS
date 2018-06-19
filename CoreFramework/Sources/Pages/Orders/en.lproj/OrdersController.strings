@@ -12,3 +12,5 @@
 "Formats.DateAndTime" = "HH:mm dd/MM";
 
 "Errors.Load" = "Problem with load orders. Check your internet connection.";
+
+"Item.text" = "While there are no orders, but I hope soon will be";
